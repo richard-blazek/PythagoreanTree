@@ -3,88 +3,85 @@
 #include <cmath>
 #include <vector>
 #include <string>
-#include "mylibraries/geometry.h"
-#include "mylibraries/colors.h"
 
-using point=geometry::coordinates::Cartesian<double>;
-using line=geometry::Line<point, double>;
-using color=colors::RGB;
+struct Point
+{
+	double x, y;
+};
 
-std::string to_string(color col)
+struct Line
 {
-	constexpr static char alphabet[17]="0123456789ABCDEF";
-	char result[7]={'#', alphabet[col.r/16], alphabet[col.r%16], alphabet[col.g/16], alphabet[col.g%16], alphabet[col.b/16], alphabet[col.b%16]};
-	return std::string(result, 7);
-}
-constexpr point third(point p1, point p2, double ab)
+	Point begin, end;
+};
+
+constexpr Point third(Point p1, Point p2, double ab)
 {
-	point dp=p2-p1;
-	double c=dp.Distance();
-	double angle=geometry::pi<double>-2*std::atan(ab);
-	double vyska=sin(angle)*c/2;
-	double c_0=(1-cos(angle))*c/2;
-	double y=p1.y+c_0/c*dp.y+vyska/c*dp.x;
-	double x=p1.x+c_0/c*dp.x-vyska/c*dp.y;
-	return point(x, y);
+	double dx = p2.x - p1.x, dy = p2.y - p1.y;
+	double c = std::sqrt(dx * dx + dy * dy);
+	double angle = M_PI - 2 * std::atan(ab);
+	double height = sin(angle) * c / 2;
+	double c_0 = (1 - cos(angle)) * c / 2;
+	double y = p1.y + c_0 / c * dy + height / c * dx;
+	double x = p1.x + c_0 / c * dx - height / c * dy;
+	return Point{x, y};
 }
-line shifted(line ln)
+
+Line shifted(Line ln)
 {
-	point shift=~(ln.end-ln.begin);
-	shift.x*=-1;
-	return line(ln.begin+shift, ln.end+shift);
+	double shift_y = ln.end.x - ln.begin.x;
+	double shift_x = ln.begin.y - ln.end.y;
+	return Line{Point{ln.begin.x + shift_x, ln.begin.y + shift_y}, Point{ln.end.x + shift_x, ln.end.y + shift_y}};
 }
-void svg_open(std::ostream& out, int w, int h)
+
+void svg_open(std::ostream &out, int w, int h)
 {
-	out<<"<svg viewBox=\"0 0 "<<w<<" "<<h<<"\" xmlns=\"http://www.w3.org/2000/svg\">";
+	out << "<svg viewBox=\"0 0 " << w << " " << h << "\" xmlns=\"http://www.w3.org/2000/svg\">\n";
 }
-void svg_close(std::ostream& out)
+
+void svg_close(std::ostream &out)
 {
-	out<<"</svg>";
+	out << "</svg>";
 }
-template<typename Cont>
-void svg_polygon(std::ostream& out, const Cont& cont, const std::string& fill, const std::string& stroke, double offset, double width)
+
+void svg_quadrilateral(std::ostream &out, Line a, Line b, const std::string &fill, const std::string &stroke, double offset, double width)
 {
-	out<<"<polygon points=\"";
-	for(const auto& it:cont)
-	{
-		out<<it.x<<","<<offset-it.y<<" ";
-	}
-	out<<"\" fill=\""<<fill<<"\" stroke=\""<<stroke<<"\" stroke-width=\""<<width<<"\" />";
+	out << "<polygon points=\"";
+	out << a.begin.x << "," << offset - a.begin.y << " ";
+	out << a.end.x << "," << offset - a.end.y << " ";
+	out << b.end.x << "," << offset - b.end.y << " ";
+	out << b.begin.x << "," << offset - b.begin.y;
+	out << "\" fill=\"" << fill << "\" stroke=\"" << stroke << "\" stroke-width=\"" << width << "\"/>\n";
 }
-template<typename T, typename... Types>
-std::vector<T> vec(const T& arg, const Types&... args)
-{
-	return std::move(std::vector({arg, args...}));
-}
-void svg_quadrilateral(std::ostream& out, line a, line b, const std::string& fill, const std::string& stroke, double offset, double width)
-{
-	svg_polygon(out, vec(a.begin, a.end, b.end, b.begin), fill, stroke, offset, width);
-}
+
 constexpr bool IsPowerOf2(int value)
 {
-	return value>0&&(value&(value-1))==0;
+	return value > 0 && (value & (value - 1)) == 0;
 }
 int main()
 {
-	double ab=0.0;
-	int count=0;
-	std::cin>>ab>>count;
+	double ab = 0.0;
+	int count = 0;
+	std::cout << "Enter the a/b ratio: ";
+	std::cin >> ab;
+	std::cout << "Enter the precision: ";
+	std::cin >> count;
+
 	std::ofstream ofile("out.svg");
-	std::vector<line> lines={line{point{400,100}, point{600,100}}};
+	std::vector<Line> lines = {Line{Point{400, 100}, Point{600, 100}}};
 	svg_open(ofile, 1000, 1000);
-	int line_i=0;
-	for(size_t i=0; i<lines.size() && i<(1u<<count)-1; ++i)
+	int line_i = 0;
+	for (size_t i = 0; i < lines.size() && i < (1u << count) - 1; ++i)
 	{
-		if(IsPowerOf2(i+1))
+		if (IsPowerOf2(i + 1))
 		{
 			++line_i;
 		}
-		line moved=shifted(lines[i]);
+		Line moved = shifted(lines[i]);
 		svg_quadrilateral(ofile, lines[i], moved, "#301500", "#00FF00", 1000, 1.0);
-		point c=third(moved.begin, moved.end, ab);
-		lines.push_back(line(moved.begin, c));
-		lines.push_back(line(c, moved.end));
+		Point c = third(moved.begin, moved.end, ab);
+		lines.push_back(Line{moved.begin, c});
+		lines.push_back(Line{c, moved.end});
 	}
 	svg_close(ofile);
-    return 0;
+	return 0;
 }
