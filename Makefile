@@ -1,5 +1,5 @@
-ptree: main.cpp
-	g++ -o ptree main.cpp
+ptree: main.c
+	gcc -o ptree main.c -lm
 
 clean:
 	rm -f ptree
