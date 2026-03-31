@@ -24,7 +24,7 @@ void process_line(FILE *out, point bl, point br, int depth, float ratio)
 	point tr = {br.x + bl.y - br.y, br.y + br.x - bl.x};
 
 	fprintf(out, "<polygon points=\"%.2f,%.2f %.2f,%.2f %.2f,%.2f %.2f,%.2f\" fill=\"#301500\" stroke=\"#00FF00\" stroke-width=\"1\"/>\n",
-		bl.x, 1000 - bl.y, br.x, 1000 - br.y, tr.x, 1000 - tr.y, tl.x, 1000 - tl.y);
+		bl.x, bl.y, br.x, br.y, tr.x, tr.y, tl.x, tl.y);
 
 	if (depth > 0)
 	{
@@ -43,10 +43,12 @@ int main(int argc, char *argv[])
 	sscanf(argv[2], "%d", &count);
 
 	FILE *out = fopen("out.svg", "w");
-	fputs("<svg viewBox=\"0 0 1000 1000\" xmlns=\"http://www.w3.org/2000/svg\">\n", out);
+	fputs("<svg viewBox=\"0 -1000 1000 1000\" xmlns=\"http://www.w3.org/2000/svg\">\n", out);
+	fputs("<g transform=\"scale(1,-1)\">\n", out);
 
 	point bl = {400, 100}, br = {600, 100};
 	process_line(out, bl, br, count, ratio);
+	fputs("</g>\n", out);
 	fputs("</svg>", out);
 	fclose(out);
 	return 0;
